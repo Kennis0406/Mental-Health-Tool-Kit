@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teen Mental Health Toolkit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: New custom palette: #232a44 (Dark Blue - primary text/footer), #182f58 (Deeper Blue - accents/darker elements), #cdd4eb (Light Lavender Blue - soft backgrounds), #a7b3dc (Medium Lavender Blue - secondary soft backgrounds/borders), #ffffff (White - main backgrounds/text), and #008080 (Teal - for highlights). This palette provides a sophisticated, calming, and professional feel with a fresh highlight. -->
+    <!-- Application Structure Plan: A task-oriented, non-linear dashboard. The core is an interactive hub guiding users based on their immediate needs (e.g., "I need strategies," "I want to listen"). This structure was chosen over a linear report format because teens in distress need immediate access to relevant tools, not a lengthy introduction. The SPA is divided into thematic, interactive sections: 1) Key Stressors Chart (context), 2) Find Your Strategy (actionable tools), 3) Explore Resources (filterable library), 4) Build Resilience (interactive framework), 5) Get Help Now (crisis support - detailed Australian contacts), 6) AI Mental Health Q&A (LLM-powered general information), and 7) School Contacts (local support within Banksia Park International High School). This user-centric flow makes the information more accessible and empowering. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Teen Stressor Statistics -> Goal: Inform/Validate -> Viz: Bar Chart (Chart.js) -> Interaction: Hover for details -> Justification: Visualizes data for quick impact.
+        - Report Info: Practical Coping Skills -> Goal: Provide Tools -> Viz: Interactive Accordion (HTML/JS) -> Interaction: Click to reveal strategies -> Justification: Organizes dense info into actionable, user-triggered snippets.
+        - Report Info: List of Resources (Podcasts, Apps) -> Goal: Organize/Access -> Viz: Filterable Grid of Cards (HTML/JS) -> Interaction: Buttons filter grid by type/need -> Justification: Enables rapid discovery of relevant resources.
+        - Report Info: 7 Cs of Resilience -> Goal: Teach a Framework -> Viz: Interactive Grid of Cards (HTML/JS) -> Interaction: Click card to reveal details -> Justification: Makes a complex framework digestible and engaging.
+        - Report Info: Crisis Lines (Australian context) -> Goal: Immediate Support -> Viz: High-contrast, sticky banner and dedicated section -> Interaction: Clickable links/numbers -> Justification: Ensures critical, locally relevant info is always visible and accessible.
+        - NEW: Personalized Strategy Suggestion (LLM) -> Goal: Personalized coping mechanism -> Viz: Text input, button, text output (HTML/JS + Gemini API) -> Interaction: User describes feeling, LLM provides strategy -> Justification: Offers dynamic, tailored support.
+        - NEW: AI Mental Health Q&A (LLM) -> Goal: General informational support -> Viz: Text input, button, text output (HTML/JS + Gemini API) -> Interaction: User asks question, LLM provides info -> Justification: Provides quick, accessible answers to common questions.
+        - NEW: Banksia Park School Contacts -> Goal: Provide direct school support -> Viz: Section with cards (HTML/CSS) -> Interaction: Informational display -> Justification: Offers accessible, specific local contacts for students.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff; /* White - Main Background */
+        }
+        .bg-custom-dark-blue { background-color: #232a44; } /* Dark Blue */
+        .bg-custom-deeper-blue { background-color: #182f58; } /* Deeper Blue */
+        .bg-custom-light-lavender { background-color: #cdd4eb; } /* Light Lavender Blue */
+        .bg-custom-medium-lavender { background-color: #a7b3dc; } /* Medium Lavender Blue */
+        .bg-custom-teal { background-color: #008080; } /* Teal */
+        .text-custom-dark-blue { color: #232a44; }
+        .text-custom-deeper-blue { color: #182f58; }
+        .text-custom-light-gray { color: #4B5563; } /* General text color for readability */
+        .text-custom-teal { color: #008080; } /* Teal */
+        .border-custom-medium-lavender { border-color: #a7b3dc; }
+        .border-custom-teal { border-color: #008080; } /* Teal */
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .resource-card, .strategy-item, .c-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .resource-card:hover, .strategy-item:hover, .c-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .filter-btn.active {
+            background-color: #182f58; /* Deeper Blue for active filter */
+            color: white;
+        }
+        .filter-btn {
+             background-color: #cdd4eb; /* Light Lavender Blue for inactive filter */
+             color: #232a44; /* Dark Blue for inactive filter text */
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #232a44; /* Dark Blue for spinner */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-white text-custom-light-gray">
+
+    <header id="get-help-now" class="bg-custom-light-lavender border-b-4 border-custom-teal p-3 text-center sticky top-0 z-50 bg-white shadow-md">
+        <p class="font-semibold">
+            If you're in crisis or need to talk, help is available 24/7. 
+            <a href="tel:131114" class="text-custom-teal font-bold underline">Call Lifeline on 13 11 14</a> or 
+            <a href="tel:1800551800" class="text-custom-teal font-bold underline">Kids Helpline on 1800 55 1800</a>. You are not alone.
+        </p>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+        <section id="hero" class="text-center mb-20">
+            <img src="image_96c61c.png" alt="Banksia Park International High School Logo" class="mx-auto mb-8 max-w-sm h-auto">
+            <h1 class="text-4xl md:text-5xl font-bold text-custom-dark-blue mb-4">Your Mental Health Toolkit</h1>
+            <p class="text-lg md:text-xl max-w-3xl mx-auto mb-8">
+                Navigating the ups and downs of life can be tough. This is a space to find resources, learn strategies, and build strength for your mental health journey. You've got this.
+            </p>
+            <div class="flex flex-wrap justify-center gap-3 md:gap-4">
+                <a href="#strategies" class="bg-custom-light-lavender text-custom-dark-blue font-semibold py-3 px-6 rounded-full shadow-sm hover:shadow-md transition">Find Strategies</a>
+                <a href="#resources" class="bg-custom-light-lavender text-custom-dark-blue font-semibold py-3 px-6 rounded-full shadow-sm hover:shadow-md transition">Explore Resources</a>
+                <a href="#resilience" class="bg-custom-deeper-blue text-white font-semibold py-3 px-6 rounded-full shadow-sm hover:shadow-md transition">Build Resilience</a>
+                <a href="#ai-chat" class="bg-custom-deeper-blue text-white font-semibold py-3 px-6 rounded-full shadow-sm hover:shadow-md transition">Ask AI ✨</a>
+                <a href="#school-contacts" class="bg-custom-deeper-blue text-white font-semibold py-3 px-6 rounded-full shadow-sm hover:shadow-md transition">School Contacts</a>
+            </div>
+        </section>
+
+        <section id="stats" class="mb-24">
+            <h2 class="text-3xl font-bold text-custom-dark-blue text-center mb-4">You're Not the Only One</h2>
+             <p class="text-center max-w-3xl mx-auto mb-10">Feeling stressed or overwhelmed is more common than you might think. This chart shows some of the top stressors reported by teens. Seeing this helps us understand that these feelings are a shared experience.</p>
+            <div class="bg-white p-6 rounded-2xl shadow-lg">
+                <div class="chart-container">
+                    <canvas id="stressorsChart"></canvas>
+                </div>
+            </div>
+        </section>
+        
+        <section id="strategies" class="mb-24 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-custom-dark-blue text-center mb-4">Find Your Strategy</h2>
+            <p class="text-center max-w-3xl mx-auto mb-10">When feelings get intense, having a go-to strategy can make a huge difference. Here are some practical, actionable techniques you can try right now to manage tough moments. Click on a challenge to see a few ways to cope.</p>
+            <div id="strategy-container" class="space-y-4 max-w-4xl mx-auto mb-12"></div>
+
+            <div class="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow-lg border border-custom-medium-lavender">
+                <h3 class="text-2xl font-bold text-custom-dark-blue mb-4 text-center">Get a Personalized Strategy ✨</h3>
+                <p class="text-custom-light-gray mb-4 text-center">Describe how you're feeling right now, and our AI can suggest a coping strategy just for you. (e.g., "I'm feeling really anxious about my exams tomorrow.")</p>
+                <textarea id="feelingInput" class="w-full p-3 border border-custom-medium-lavender rounded-lg focus:ring-2 focus:ring-custom-dark-blue focus:border-transparent mb-4 resize-y min-h-[100px]" placeholder="Tell us how you're feeling..."></textarea>
+                <button id="generateStrategyBtn" class="bg-custom-teal text-white font-semibold py-3 px-6 rounded-lg w-full hover:opacity-90 transition flex items-center justify-center">
+                    Generate Strategy 
+                    <span id="strategySpinner" class="loading-spinner hidden"></span>
+                </button>
+                <div id="strategyOutput" class="mt-6 p-4 bg-custom-light-lavender rounded-lg text-custom-dark-blue hidden"></div>
+                 <p id="strategyDisclaimer" class="text-sm text-center text-custom-light-gray mt-4 hidden">Please remember that this is an AI-generated suggestion and not professional medical advice. If you're struggling, please reach out to a trusted adult or mental health professional.</p>
+            </div>
+        </section>
+        
+        <section id="resources" class="mb-24 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-custom-dark-blue text-center mb-4">Explore Resources</h2>
+            <p class="text-center max-w-3xl mx-auto mb-10">Whether you want to listen to a podcast, try a new app, or connect with a community, there's a resource here for you. Use the filters to find exactly what you're looking for.</p>
+            <div class="flex flex-wrap justify-center gap-2 mb-8" id="resource-filters">
+            </div>
+            <div id="resource-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+        </section>
+
+        <section id="ai-chat" class="mb-24 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-custom-dark-blue text-center mb-4">Ask Our AI Anything About Mental Health ✨</h2>
+            <p class="text-center max-w-3xl mx-auto mb-10">Have a general question about mental health, emotions, or coping? Ask our AI. Remember, this AI provides general information and is not a substitute for professional advice.</p>
+            <div class="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow-lg border border-custom-medium-lavender">
+                <input type="text" id="aiQuestionInput" class="w-full p-3 border border-custom-medium-lavender rounded-lg focus:ring-2 focus:ring-custom-dark-blue focus:border-transparent mb-4" placeholder="e.g., What are some signs of burnout?">
+                <button id="askAiBtn" class="bg-custom-teal text-white font-semibold py-3 px-6 rounded-lg w-full hover:opacity-90 transition flex items-center justify-center">
+                    Ask AI 
+                    <span id="aiSpinner" class="loading-spinner hidden"></span>
+                </button>
+                <div id="aiAnswerOutput" class="mt-6 p-4 bg-custom-light-lavender rounded-lg text-custom-dark-blue hidden"></div>
+                <p id="aiDisclaimer" class="text-sm text-center text-custom-light-gray mt-4 hidden">This is an AI-generated response and is for informational purposes only. It is not a substitute for professional medical or mental health advice.</p>
+            </div>
+        </section>
+
+        <section id="emergency-contacts" class="mb-24 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-custom-dark-blue text-center mb-4">Australian Support & Crisis Contacts</h2>
+            <p class="text-center max-w-3xl mx-auto mb-10">If you need to talk to someone right now, or are looking for professional support in Australia, these services are available 24/7 or during specific hours. Don't hesitate to reach out.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-custom-medium-lavender">
+                    <h3 class="text-xl font-bold text-custom-deeper-blue mb-2">Lifeline</h3>
+                    <p class="text-custom-light-gray mb-4">24/7 crisis support and suicide prevention services.</p>
+                    <p class="font-semibold">Phone: <a href="tel:131114" class="text-custom-teal underline">13 11 14</a></p>
+                    <p class="font-semibold">Text: <a href="sms:0477131114" class="text-custom-teal underline">0477 13 11 14</a> (6pm-Midnight AEST)</p>
+                    <p class="font-semibold">Chat: <a href="https://www.lifeline.org.au/get-help/online-chat/" target="_blank" class="text-custom-teal underline">lifeline.org.au/get-help/online-chat/</a> (7pm-Midnight AEST)</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-custom-medium-lavender">
+                    <h3 class="text-xl font-bold text-custom-deeper-blue mb-2">Kids Helpline</h3>
+                    <p class="text-custom-light-gray mb-4">Free, confidential 24/7 online and phone counseling for young people aged 5 to 25.</p>
+                    <p class="font-semibold">Phone: <a href="tel:1800551800" class="text-custom-teal underline">1800 55 1800</a></p>
+                    <p class="font-semibold">WebChat: <a href="https://kidshelpline.com.au/get-help/webchat-counselling" target="_blank" class="text-custom-teal underline">kidshelpline.com.au/get-help/webchat-counselling</a></p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-custom-medium-lavender">
+                    <h3 class="text-xl font-bold text-custom-deeper-blue mb-2">Beyond Blue</h3>
+                    <p class="text-custom-light-gray mb-4">Offers mental health support, advice, and referrals for all ages.</p>
+                    <p class="font-semibold">Phone: <a href="tel:1300224636" class="text-custom-teal underline">1300 22 4636</a></p>
+                    <p class="font-semibold">Chat: <a href="https://www.beyondblue.org.au/get-support/get-immediate-support" target="_blank" class="text-custom-teal underline">beyondblue.org.au/get-support/get-immediate-support</a></p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-custom-medium-lavender">
+                    <h3 class="text-xl font-bold text-custom-deeper-blue mb-2">Headspace</h3>
+                    <p class="text-custom-light-gray mb-4">National youth mental health foundation for 12-25 year olds, offering counseling and support.</p>
+                    <p class="font-semibold">Phone: <a href="tel:1800650890" class="text-custom-teal underline">1800 650 890</a> (9am-1am AEST/AEDT, 7 days)</p>
+                    <p class="font-semibold">Online Chat: <a href="https://headspace.org.au/eheadspace/" target="_blank" class="text-custom-teal underline">eheadspace</a></p>
+                    <p class="font-semibold">Find a Centre: <a href="https://headspace.org.au/our-locations/" target="_blank" class="text-custom-teal underline">headspace.org.au/our-locations/</a></p>
+                </div>
+            </div>
+        </section>
+
+        <section id="school-contacts" class="mb-24 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-custom-dark-blue text-center mb-4">Banksia Park International High School Contacts</h2>
+            <p class="text-center max-w-3xl mx-auto mb-10">Your school community at Banksia Park International High School is here to support you. If you need to talk to someone, or need guidance on school-related issues, please reach out to one of the following key people:</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-custom-medium-lavender text-center">
+                    <h3 class="text-xl font-bold text-custom-deeper-blue mb-2">Year Level Leaders</h3>
+                    <p class="text-custom-light-gray mb-4">Your Year Level Leader is a great first point of contact for any concerns related to your year level, academic progress, or general well-being within school.</p>
+                    <p class="font-semibold">How to contact: Speak to them directly, or ask at Student Services.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-custom-medium-lavender text-center">
+                    <h3 class="text-xl font-bold text-custom-deeper-blue mb-2">Wellbeing Team</h3>
+                    <p class="text-custom-light-gray mb-4">The Wellbeing Team, located within Student Services, can provide confidential support and connect you with internal or external mental health resources.</p>
+                    <p class="font-semibold">How to contact: Visit Student Services, or ask a trusted teacher for assistance.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-custom-medium-lavender text-center">
+                    <h3 class="text-xl font-bold text-custom-deeper-blue mb-2">Teachers</h3>
+                    <p class="text-custom-light-gray mb-4">Your teachers are here to help and can be a good starting point if you're comfortable. They can provide support or direct you to the right person.</p>
+                    <p class="font-semibold">How to contact: Approach them after class, or send them an email via the school system.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section id="resilience" class="mb-24 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-custom-dark-blue text-center mb-4">Build Your Resilience</h2>
+            <p class="text-center max-w-3xl mx-auto mb-10">Resilience is like a muscle—the more you work on it, the stronger it gets. The "7 Cs" are a framework for understanding the key ingredients of resilience. Click on each one to learn how you can build it in your own life.</p>
+            <div id="resilience-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            </div>
+        </section>
+
+    </main>
+    
+    <footer class="bg-custom-dark-blue text-white py-8">
+        <div class="container mx-auto px-4 text-center">
+            <p>Remember, taking care of your mental health is a journey, not a destination.</p>
+            <p class="text-sm opacity-70 mt-2">This interactive toolkit was created from a report on teen mental health resources. It is for informational purposes and is not a substitute for professional medical advice.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            const stressorsData = {
+                labels: ['Anxiety about Future', 'Academic Pressure', 'Parental Expectations', 'Social Media Comparison'],
+                datasets: [{
+                    label: '% of Teens Reporting as a Stressor',
+                    data: [66, 64, 53, 37],
+                    backgroundColor: [
+                        'rgba(35, 42, 68, 0.7)',  /* #232a44 with transparency */
+                        'rgba(24, 47, 88, 0.7)',  /* #182f58 with transparency */
+                        'rgba(0, 128, 128, 0.7)', /* Teal with transparency */
+                        'rgba(167, 179, 220, 0.7)' /* #a7b3dc with transparency */
+                    ],
+                    borderColor: [
+                        '#232a44',
+                        '#182f58',
+                        '#008080', /* Teal */
+                        '#a7b3dc'
+                    ],
+                    borderWidth: 1,
+                    borderRadius: 8
+                }]
+            };
+
+            const stressorsChartCtx = document.getElementById('stressorsChart').getContext('2d');
+            new Chart(stressorsChartCtx, {
+                type: 'bar',
+                data: stressorsData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 80,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                         y: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const strategies = [
+                {
+                    challenge: "I'm feeling anxious or stressed",
+                    solutions: [
+                        { title: "4-7-8 Breathing", description: "Inhale through your nose for 4 seconds, hold your breath for 7 seconds, and exhale slowly through your mouth for 8 seconds. Repeat 3-4 times to calm your nervous system." },
+                        { title: "Body Scan", description: "Lie down and bring attention to your toes. Notice any sensations without judgment. Slowly move your focus up through your body, part by part, releasing tension as you go." },
+                        { title: "Move Your Body", description: "Go for a walk, stretch, or dance to some music. Physical activity is a powerful way to release endorphins and reduce stress hormones." }
+                    ]
+                },
+                {
+                    challenge: "I'm stuck in negative thoughts",
+                    solutions: [
+                        { title: "Journal It Out", description: "Write down what you're thinking. Getting it on paper can help you see the thoughts more clearly and challenge whether they're actually true." },
+                        { title: "Practice Positive Self-Talk", description: "Notice when you're being hard on yourself. Try replacing a negative thought like 'I can't do this' with 'I can try my best, and that's enough'." },
+                        { title: "Talk to Someone", description: "Share what you're feeling with a friend or trusted adult. Saying it out loud can take away some of its power and help you gain a new perspective." }
+                    ]
+                },
+                {
+                    challenge: "I'm overwhelmed and can't focus",
+                    solutions: [
+                        { title: "Break It Down", description: "A big task can feel impossible. Break it down into tiny, manageable steps. Focus on completing just the very first one." },
+                        { title: "The 5-4-3-2-1 Method", description: "Ground yourself in the present. Name 5 things you can see, 4 things you can feel, 3 things you can hear, 2 things you can smell, and 1 thing you can taste." },
+                        { title: "Set a Timer", description: "Work on one thing for a short, set amount of time, like 15 minutes. Knowing there's an end in sight can make it easier to start." }
+                    ]
+                }
+            ];
+
+            const strategyContainer = document.getElementById('strategy-container');
+            strategies.forEach(item => {
+                const details = document.createElement('details');
+                details.className = 'strategy-item bg-white p-4 rounded-lg shadow-sm cursor-pointer border border-custom-medium-lavender';
+                
+                const summary = document.createElement('summary');
+                summary.className = 'text-lg font-semibold text-custom-dark-blue list-none flex justify-between items-center';
+                summary.innerHTML = `<span>${item.challenge}</span><span class="text-xl">+</span>`;
+                details.appendChild(summary);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'mt-4 space-y-3';
+                item.solutions.forEach(sol => {
+                    contentDiv.innerHTML += `
+                        <div class="p-3 bg-custom-light-lavender rounded">
+                            <h4 class="font-bold text-custom-dark-blue">${sol.title}</h4>
+                            <p class="text-custom-light-gray">${sol.description}</p>
+                        </div>
+                    `;
+                });
+                details.appendChild(contentDiv);
+                
+                details.addEventListener('toggle', (event) => {
+                    const icon = event.target.querySelector('summary span:last-child');
+                    if (event.target.open) {
+                        icon.textContent = '-';
+                    } else {
+                        icon.textContent = '+';
+                    }
+                });
+
+                strategyContainer.appendChild(details);
+            });
+
+            const resources = [
+                { name: "She Persisted", type: "Podcast", focus: ["Anxiety", "Resilience"], desc: "Hosted by a teen, this podcast offers relatable talks on anxiety, school stress, and confidence.", link: "https://shepersistedpodcast.com/podcast" },
+                { name: "On Our Minds", type: "Podcast", focus: ["Anxiety", "Stress"], desc: "A podcast by and for high schoolers, sharing real stories about stress, FOMO, and friendships.", link: "https://www.pbs.org/newshour/student-reporting-labs/on-our-minds" },
+                { name: "This Teen Life", type: "Podcast", focus: ["Connection", "Anxiety"], desc: "Teens share honest stories to help make the world feel less lonely and process feelings.", link: "https://www.thisteenagelife.org/episodes" },
+                { name: "Mind Matters", type: "YouTube", focus: ["Anxiety", "Stress", "Connection"], desc: "Top YouTube creators and experts from The Jed Foundation talk mental health, from stress to loneliness.", link: "https://www.youtube.com/@jedfoundation" },
+                { name: "NIMH Mental Health Minute", type: "YouTube", focus: ["Anxiety", "Stress"], desc: "Quick, 60-second videos with practical tips for managing stress and anxiety.", link: "https://www.youtube.com/playlist?list=PL_5_t4B0AdA4j3k5s4i6A3p1a1p5aXwF2" },
+                { name: "BITE BACK Program", type: "Program", focus: ["Resilience", "Connection"], desc: "A free, self-guided online program for ages 13-16 to build mental fitness and resilience.", link: "https://www.biteback.org.au/" },
+                { name: "BRAVE Program", type: "Program", focus: ["Anxiety"], desc: "A free, interactive online program that teaches you proven techniques to manage anxiety and fears.", link: "https://brave4you.psy.uq.edu.au/" },
+                { name: "ReachOut.com", type: "Community", focus: ["Connection", "Support"], desc: "An online space with peer forums, real stories, and one-on-one chats with trained peer workers.", link: "http://au.reachout.com/" },
+                { name: "Calm App", type: "App", focus: ["Anxiety", "Stress"], desc: "Guided meditations, sleep stories, and breathing exercises to help you de-stress and manage anxiety.", link: "https://www.calm.com/" }
+            ];
+            
+            const resourceGrid = document.getElementById('resource-grid');
+            const resourceFiltersContainer = document.getElementById('resource-filters');
+            const filters = ['All', 'Podcast', 'YouTube', 'App', 'Program', 'Community', 'Support'];
+            
+            filters.forEach(filter => {
+                const button = document.createElement('button');
+                button.textContent = filter;
+                button.className = 'filter-btn font-medium py-2 px-4 rounded-full text-sm transition';
+                if (filter === 'All') {
+                    button.classList.add('active');
+                }
+                button.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    filterResources(filter);
+                });
+                resourceFiltersContainer.appendChild(button);
+            });
+
+            function renderResources(items) {
+                resourceGrid.innerHTML = '';
+                items.forEach(resource => {
+                    const card = document.createElement('div');
+                    card.className = 'resource-card bg-white p-6 rounded-xl shadow-sm border border-custom-medium-lavender flex flex-col';
+                    card.innerHTML = `
+                        <h3 class="text-xl font-bold text-custom-deeper-blue mb-2">${resource.name}</h3>
+                        <p class="text-custom-light-gray mb-4 flex-grow">${resource.desc}</p>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Type: ${resource.type}</span>
+                            ${resource.focus.map(f => `<span class="bg-custom-light-lavender text-custom-dark-blue text-xs font-medium px-2.5 py-0.5 rounded-full">Focus: ${f}</span>`).join('')}
+                        </div>
+                        <a href="${resource.link}" target="_blank" class="bg-custom-teal text-white font-semibold text-center py-2 px-4 rounded-lg mt-auto hover:opacity-90 transition">Visit Resource &rarr;</a>
+                    `;
+                    resourceGrid.appendChild(card);
+                });
+            }
+
+            function filterResources(filter) {
+                if (filter === 'All') {
+                    renderResources(resources);
+                } else {
+                    const filtered = resources.filter(r => r.type === filter);
+                    renderResources(filtered);
+                }
+            }
+
+            renderResources(resources);
+
+
+            const resilienceCs = [
+                { name: "Confidence", desc: "The solid belief in your own abilities. Build it by demonstrating competence—knowing you are capable because you've done it before." },
+                { name: "Competence", desc: "Knowing you can handle situations effectively. Develop it by practicing skills, learning from mistakes, and focusing on your strengths." },
+                { name: "Connection", desc: "Having close ties to family, friends, and community. These relationships provide a sense of security and belonging." },
+                { name: "Character", desc: "Having a fundamental sense of right and wrong. This helps you make responsible choices and contributes to your self-worth." },
+                { name: "Contribution", desc: "Understanding the world is a better place because you are in it. Contributing to your community builds a sense of purpose." },
+                { name: "Coping", desc: "Having a wide range of healthy strategies to manage stress. This reduces the chance of turning to harmful coping mechanisms." },
+                { name: "Control", desc: "Realizing you can influence the outcomes of your decisions. This helps you see that you have the power to bounce back from setbacks." }
+            ];
+
+            const resilienceGrid = document.getElementById('resilience-grid');
+            resilienceCs.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'c-card bg-custom-light-lavender p-6 rounded-xl shadow-sm text-center cursor-pointer';
+                card.innerHTML = `
+                    <h3 class="text-2xl font-bold text-custom-dark-blue mb-2">${c.name}</h3>
+                    <p class="text-custom-light-gray">${c.desc}</p>
+                `;
+                resilienceGrid.appendChild(card);
+            });
+
+            // Gemini API Integration - Personalized Strategy
+            const feelingInput = document.getElementById('feelingInput');
+            const generateStrategyBtn = document.getElementById('generateStrategyBtn');
+            const strategyOutput = document.getElementById('strategyOutput');
+            const strategySpinner = document.getElementById('strategySpinner');
+            const strategyDisclaimer = document.getElementById('strategyDisclaimer');
+
+            generateStrategyBtn.addEventListener('click', async () => {
+                const prompt = feelingInput.value.trim();
+                if (!prompt) {
+                    strategyOutput.textContent = "Please describe how you're feeling.";
+                    strategyOutput.classList.remove('hidden');
+                    return;
+                }
+
+                strategyOutput.classList.add('hidden');
+                strategyDisclaimer.classList.add('hidden');
+                strategySpinner.classList.remove('hidden');
+                generateStrategyBtn.disabled = true;
+
+                try {
+                    let chatHistory = [];
+                    chatHistory.push({ role: "user", parts: [{ text: `As a supportive mental health assistant for teens, provide a brief, actionable coping strategy or positive reframing technique for the following feeling or situation. Keep it concise and encouraging, around 2-3 sentences. User feeling: "${prompt}"` }] });
+                    const payload = { contents: chatHistory };
+                    const apiKey = "";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        strategyOutput.textContent = text;
+                        strategyOutput.classList.remove('hidden');
+                        strategyDisclaimer.classList.remove('hidden');
+                    } else {
+                        strategyOutput.textContent = "Sorry, I couldn't generate a strategy right now. Please try again.";
+                        strategyOutput.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.error("Error generating strategy:", error);
+                    strategyOutput.textContent = "An error occurred while generating the strategy. Please try again later.";
+                    strategyOutput.classList.remove('hidden');
+                } finally {
+                    strategySpinner.classList.add('hidden');
+                    generateStrategyBtn.disabled = false;
+                }
+            });
+
+            // Gemini API Integration - AI Mental Health Q&A
+            const aiQuestionInput = document.getElementById('aiQuestionInput');
+            const askAiBtn = document.getElementById('askAiBtn');
+            const aiAnswerOutput = document.getElementById('aiAnswerOutput');
+            const aiSpinner = document.getElementById('aiSpinner');
+            const aiDisclaimer = document.getElementById('aiDisclaimer');
+
+            askAiBtn.addEventListener('click', async () => {
+                const question = aiQuestionInput.value.trim();
+                if (!question) {
+                    aiAnswerOutput.textContent = "Please ask a question.";
+                    aiAnswerOutput.classList.remove('hidden');
+                    return;
+                }
+
+                aiAnswerOutput.classList.add('hidden');
+                aiDisclaimer.classList.add('hidden');
+                aiSpinner.classList.remove('hidden');
+                askAiBtn.disabled = true;
+
+                try {
+                    let chatHistory = [];
+                    chatHistory.push({ role: "user", parts: [{ text: `As a helpful and supportive AI assistant for teens, answer the following general question about mental health or emotions. Keep the answer concise, informative, and easy to understand. Emphasize that this is not medical advice. Question: "${question}"` }] });
+                    const payload = { contents: chatHistory };
+                    const apiKey = ""; 
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        aiAnswerOutput.textContent = text;
+                        aiAnswerOutput.classList.remove('hidden');
+                        aiDisclaimer.classList.remove('hidden');
+                    } else {
+                        aiAnswerOutput.textContent = "Sorry, I couldn't find an answer right now. Please try asking in a different way.";
+                        aiAnswerOutput.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.error("Error asking AI:", error);
+                    aiAnswerOutput.textContent = "An error occurred while getting the answer. Please try again later.";
+                    aiAnswerOutput.classList.remove('hidden');
+                } finally {
+                    aiSpinner.classList.add('hidden');
+                    askAiBtn.disabled = false;
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
